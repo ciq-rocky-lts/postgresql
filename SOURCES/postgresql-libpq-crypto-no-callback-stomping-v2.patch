@@ -1,0 +1,52 @@
+Do not attempt to manage OpenSSL locking callbacks in libpq
+
+A deadlock occurs when connecting to Postgresql using SSL with postgresql-libs in
+a multi-threaded environment with other threads performing SSL independently.
+
+This issue has been causing Module Build Service (https://pagure.io/fm-orchestrator)
+outages, which is deployed on RHEL 7.4 but with the latest postgresql-libs package installed.
+
+You can find a reproducer script and a more in-depth description of the issue here:
+https://postgrespro.com/list/thread-id/1861629
+
+The upstream patch that resolves this issue is here:
+https://commitfest.postgresql.org/4/140/
+
+RHBZ: #1755154
+
+diff -ur postgresql-9.2.24/src/interfaces/libpq/fe-secure.c postgresql-patch/src/interfaces/libpq/fe-secure.c
+--- postgresql-9.2.24/src/interfaces/libpq/fe-secure.c	2017-11-06 23:17:39.000000000 +0100
++++ postgresql-patch/src/interfaces/libpq/fe-secure.c	2019-10-29 15:25:28.448918186 +0100
+@@ -941,9 +941,12 @@
+ 
+ 		if (ssl_open_connections++ == 0)
+ 		{
+-			/* These are only required for threaded libcrypto applications */
+-			CRYPTO_set_id_callback(pq_threadidcallback);
+-			CRYPTO_set_locking_callback(pq_lockingcallback);
++			/* These are only required for threaded libcrypto applications, but
++                        * make sure we don't stomp on them if they're already set. */
++                       if (CRYPTO_get_id_callback() == NULL)
++                               CRYPTO_set_id_callback(pq_threadidcallback);
++                       if (CRYPTO_get_locking_callback() == NULL)
++                               CRYPTO_set_locking_callback(pq_lockingcallback);
+ 		}
+ 	}
+ #endif   /* HAVE_CRYPTO_LOCK */
+@@ -997,10 +1000,13 @@
+ 
+ 	if (pq_init_crypto_lib && ssl_open_connections == 0)
+ 	{
+-		/* No connections left, unregister libcrypto callbacks */
+-		CRYPTO_set_locking_callback(NULL);
+-		CRYPTO_set_id_callback(NULL);
+ 
++		/* No connections left, unregister libcrypto callbacks, if no one
++                * registered different ones in the meantime. */
++               if (CRYPTO_get_id_callback() == pq_threadidcallback)
++                       CRYPTO_set_id_callback(NULL);
++               if (CRYPTO_get_locking_callback() == pq_lockingcallback)
++                       CRYPTO_set_locking_callback(NULL);
+ 		/*
+ 		 * We don't free the lock array. If we get another connection in
+ 		 * this process, we will just re-use them with the existing mutexes.

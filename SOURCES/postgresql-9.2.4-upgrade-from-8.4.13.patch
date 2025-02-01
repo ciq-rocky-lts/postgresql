@@ -1,0 +1,13 @@
+diff --git a/postgresql-8.4.13/src/backend/utils/misc/guc.c b/postgresql-8.4.13/src/backend/utils/misc/guc.c
+index 0ceb89f..03f4f79 100644
+--- a/postgresql-8.4.13/src/backend/utils/misc/guc.c
++++ b/postgresql-8.4.13/src/backend/utils/misc/guc.c
+@@ -2421,7 +2421,7 @@ static struct config_string ConfigureNamesString[] =
+ 			GUC_SUPERUSER_ONLY
+ 		},
+ 		&UnixSocketDir,
+-		"", assign_canonical_path, NULL
++		"/var/run/postgresql/", assign_canonical_path, NULL
+ 	},
+ 
+ 	{

@@ -1,0 +1,26 @@
+From ab371f752536e88307b2c6867d6821ec1397525e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Patrik=20Novotn=C3=BD?= <panovotn@redhat.com>
+Date: Fri, 24 Jan 2020 01:04:48 +0100
+Subject: [PATCH] Handle EAGAIN error on socket write
+
+    See BZ#1754816
+---
+ src/backend/libpq/be-secure.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/backend/libpq/be-secure.c b/src/backend/libpq/be-secure.c
+index f6d9bc50c7..5af1f15239 100644
+--- a/src/backend/libpq/be-secure.c
++++ b/src/backend/libpq/be-secure.c
+@@ -522,7 +522,7 @@ my_sock_write(BIO *h, const char *buf, int size)
+ 	BIO_clear_retry_flags(h);
+ 	if (res <= 0)
+ 	{
+-		if (errno == EINTR)
++		if (errno == EINTR || errno == EAGAIN)
+ 		{
+ 			BIO_set_retry_write(h);
+ 		}
+-- 
+2.24.1
+
