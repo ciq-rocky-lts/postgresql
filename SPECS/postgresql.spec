@@ -62,7 +62,7 @@
 Summary: PostgreSQL client programs
 Name: postgresql
 %global majorversion 13
-Version: %{majorversion}.16
+Version: %{majorversion}.22
 Release: 1%{?dist}
 
 # The PostgreSQL license is very similar to other MIT licenses, but the OSI
@@ -75,7 +75,7 @@ Url: http://www.postgresql.org/
 # that this be kept up with the latest minor release of the previous series;
 # but update when bugs affecting pg_dump output are fixed.
 %global prevmajorversion 12
-%global prevversion %{prevmajorversion}.20
+%global prevversion %{prevmajorversion}.22
 %global prev_prefix %{_libdir}/pgsql/postgresql-%{prevmajorversion}
 %global precise_version %{?epoch:%epoch:}%version-%release
 
@@ -417,16 +417,16 @@ goal of accelerating analytics queries.
 %endif
 )
 %setup -q -a 12 -n postgresql-%{version}
-%patch1 -p1
-%patch2 -p1
-%patch5 -p1
+%patch -P 1 -p1
+%patch -P 2 -p1
+%patch -P 5 -p1
 %if %external_libpq
-%patch8 -p1
+%patch -P 8 -p1
 %else
-%patch12 -p1
+%patch -P 12 -p1
 %endif
-%patch9 -p1
-%patch14 -p1
+%patch -P 9 -p1
+%patch -P 14 -p1
 
 # We used to run autoconf here, but there's no longer any real need to,
 # since Postgres ships with a reasonably modern configure script.
@@ -705,10 +705,6 @@ install -d $RPM_BUILD_ROOT/etc/pam.d
 install -m 644 %{SOURCE10} $RPM_BUILD_ROOT/etc/pam.d/postgresql
 %endif
 
-# Create the directory for sockets.
-install -d -m 755 $RPM_BUILD_ROOT%{?_localstatedir}/run/postgresql
-
-# ... and make a tmpfiles script to recreate it at reboot.
 mkdir -p $RPM_BUILD_ROOT%{_tmpfilesdir}
 install -m 0644 %{SOURCE9} $RPM_BUILD_ROOT%{_tmpfilesdir}/postgresql.conf
 
@@ -1118,7 +1114,7 @@ make -C postgresql-setup-%{setup_version} check
 %attr(644,postgres,postgres) %config(noreplace) %{?_localstatedir}/lib/pgsql/.bash_profile
 %attr(700,postgres,postgres) %dir %{?_localstatedir}/lib/pgsql/backups
 %attr(700,postgres,postgres) %dir %{?_localstatedir}/lib/pgsql/data
-%attr(755,postgres,postgres) %dir %{?_localstatedir}/run/postgresql
+%ghost %attr(755,postgres,postgres) %dir %{?_rundir}/postgresql
 %if %pam
 %config(noreplace) /etc/pam.d/postgresql
 %endif
@@ -1219,8 +1215,18 @@ make -C postgresql-setup-%{setup_version} check
 
 
 %changelog
+* Fri Aug 15 2025 Filip Janus <fjanus@redhat.com> - 13.22-1
+- Update to 13.22
+
+* Thu Nov 21 2024 Filip Janus <fjanus@redhat.com> - 13.18-1
+- Update to 13.18
+
 * Tue Aug 06 2024 Filip Janus <fjanus@redhat.com> - 13.16-1
 - Update to 13.16
+
+* Tue Jul 30 2024 Filip Janus <fjanus@redhat.com> - 13.14-2
+- Remove /var/run/postgresql
+- Related: RHEL-25756
 
 * Fri Feb 9 2024 Filip Janus <fjanus@redhat.com> - 13.14-1
 - Update to 13.14
